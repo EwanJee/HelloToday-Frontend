@@ -23,22 +23,19 @@ export const useWebSocketStore = defineStore('websocket', () => {
 
     const wsUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8080') + '/ws'
 
-    console.log('🔌 WebSocket 연결 시도:', wsUrl)
-    console.log('🔌 환경변수 VITE_API_URL:', import.meta.env.VITE_API_URL)
-
     isConnecting.value = true
     lastError.value = null
     const messageStore = useMessageStore()
 
     try {
       // SockJS 클라이언트 생성
-      const socket = new SockJS(wsUrl)
+      // const socket = new SockJS(wsUrl)
 
       // SockJS 클라이언트 생성 (credentials 포함)
-      // const socket = new SockJS(wsUrl, null, {
-      // transports: ['websocket', 'xhr-streaming', 'xhr-polling'],
-      // timeout: 10000,
-      // })
+      const socket = new SockJS(wsUrl, null, {
+      transports: ['websocket', 'xhr-streaming', 'xhr-polling'],
+      timeout: 10000,
+      })
 
       // STOMP 클라이언트 생성
       client.value = new Client({
