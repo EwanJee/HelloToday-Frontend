@@ -31,8 +31,11 @@ export const useWebSocketStore = defineStore('websocket', () => {
     const messageStore = useMessageStore()
 
     try {
-      // SockJS 클라이언트 생성
-      const socket = new SockJS(wsUrl)
+      // SockJS 클라이언트 생성 (credentials 포함)
+      const socket = new SockJS(wsUrl, null, {
+        transports: ['websocket', 'xhr-streaming', 'xhr-polling'],
+        timeout: 10000,
+      })
 
       // STOMP 클라이언트 생성
       client.value = new Client({

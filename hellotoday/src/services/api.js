@@ -4,6 +4,7 @@ import axios from 'axios'
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
   timeout: 10000,
+  withCredentials: true, // CORS credentials 포함
   headers: {
     'Content-Type': 'application/json',
   },
