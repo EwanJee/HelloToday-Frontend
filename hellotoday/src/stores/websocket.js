@@ -23,6 +23,9 @@ export const useWebSocketStore = defineStore('websocket', () => {
 
     const wsUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8080') + '/ws'
 
+    console.log('🔌 WebSocket 연결 시도:', wsUrl)
+    console.log('🔌 환경변수 VITE_API_URL:', import.meta.env.VITE_API_URL)
+
     isConnecting.value = true
     lastError.value = null
     const messageStore = useMessageStore()
@@ -34,8 +37,8 @@ export const useWebSocketStore = defineStore('websocket', () => {
       // STOMP 클라이언트 생성
       client.value = new Client({
         webSocketFactory: () => socket,
-        debug: () => {
-          // Silent debug
+        debug: (str) => {
+          console.log('🔌 STOMP Debug:', str)
         },
 
         // 연결 타임아웃 설정
