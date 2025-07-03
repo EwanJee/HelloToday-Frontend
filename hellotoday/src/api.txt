@@ -1,0 +1,183 @@
+데이터 플로우 요약
+🔄 전체 플로우
+
+페이지 로드 시:
+REST API → 기존 메시지 로드
+WebSocket → 실시간 연결 설정
+
+메시지 전송 시:
+사용자 입력 → REST API 전송 → 즉시 UI 업데이트
+동시에 → WebSocket으로 다른 사용자들에게 실시간 전송
+
+다른 사용자 메시지 수신 시:
+WebSocket 수신 → 실시간 UI 업데이트 (새 메시지 표시)
+
+과거 데이터 조회 시:
+히스토리/통계 → 모두 REST API 사용
+
+WebSocket
+'''
+@Controller
+class WebSocketController(
+    private val messageService: MessageService,
+) {
+    // 클라이언트가 메시지 채널 구독 시 현재 메시지 목록 전송
+    @SubscribeMapping("/topic/messages")
+    fun subscribeToMessages(): DailyMessageResponse = messageService.getTodayMessages()
+
+    // 클라이언트가 연결 상태 확인
+    @MessageMapping("/ping")
+    @SendTo("/topic/pong")
+    fun ping(): String = "pong"
+}
+
+override fun configureMessageBroker(config: MessageBrokerRegistry) {
+        // 클라이언트로 메시지를 보낼 때 사용할 prefix
+        config.enableSimpleBroker("/topic")
+        // 클라이언트에서 서버로 메시지를 보낼 때 사용할 prefix
+        config.setApplicationDestinationPrefixes("/app")
+    }
+
+    override fun registerStompEndpoints(registry: StompEndpointRegistry) {
+        // WebSocket 연결 엔드포인트
+        registry
+            .addEndpoint("/ws")
+            .setAllowedOriginPatterns("*")
+            .withSockJS()
+    }
+
+'''
+
+
+
+POST http://localhost:8080/api/messages
+Content-Type: application/json
+
+{
+  "content": "오늘은 정말 좋은 하루였어요! 새로운 프로젝트를 시작해서 설레네요."
+}
+{
+  "success": true,
+  "data": {
+    "id": "60f7b1234567890abcdef123",
+    "content": "오늘은 정말 좋은 하루였어요! 새로운 프로젝트를 시작해서 설레네요.",
+    "createdAt": "2025-07-01T14:30:15.123",
+    "timeAgo": "방금 전"
+  },
+  "message": "메시지가 성공적으로 저장되었습니다."
+}
+
+
+GET http://localhost:8080/api/messages/today
+{
+  "success": true,
+  "data": {
+    "date": "2025-07-01",
+    "messages": [
+      {
+        "id": "60f7b1234567890abcdef123",
+        "content": "오늘은 정말 좋은 하루였어요!",
+        "createdAt": "2025-07-01T14:30:15.123",
+        "timeAgo": "5분 전"
+      },
+      {
+        "id": "60f7b1234567890abcdef124",
+        "content": "새로운 도전을 시작해보려고 합니다.",
+        "createdAt": "2025-07-01T13:45:22.456",
+        "timeAgo": "50분 전"
+      }
+    ],
+    "totalCount": 2
+  },
+  "message": null
+}
+
+GET http://localhost:8080/api/messages/date/2025-06-30
+GET http://localhost:8080/api/messages/dates
+
+{
+  "success": true,
+  "data": [
+    "2025-07-01",
+    "2025-06-30",
+    "2025-06-29",
+    "2025-06-28"
+  ],
+  "message": null
+}
+
+GET http://localhost:8080/api/stats/today
+{
+  "success": true,
+  "data": {
+    "date": "2025-07-01",
+    "count": 15,
+    "createdAt": "2025-07-01T00:01:00.000",
+    "updatedAt": "2025-07-01T14:30:15.123"
+  },
+  "message": null
+}
+
+GET http://localhost:8080/api/stats/all
+{
+  "success": true,
+  "data": {
+    "stats": [
+      {
+        "date": "2025-07-01",
+        "count": 15,
+        "createdAt": "2025-07-01T00:01:00.000",
+        "updatedAt": "2025-07-01T14:30:15.123"
+      },
+      {
+        "date": "2025-06-30",
+        "count": 23,
+        "createdAt": "2025-06-30T00:01:00.000",
+        "updatedAt": "2025-06-30T23:55:42.789"
+      }
+    ],
+    "totalDays": 2
+  },
+  "message": null
+}
+
+예외:
+// 메세지 빈칸
+POST http://localhost:8080/api/messages
+Content-Type: application/json
+
+{
+  "content": ""
+}
+{
+  "success": false,
+  "data": null,
+  "message": "입력값 검증에 실패했습니다"
+}
+
+POST http://localhost:8080/api/messages
+Content-Type: application/json
+
+{
+  "content": "500자를 초과하는 매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우매우긴 메시지"
+}
+
+// 1분간 10번 이상 요청있을 때 
+override fun doFilterInternal(
+                request: HttpServletRequest,
+                response: HttpServletResponse,
+                filterChain: FilterChain,
+            ) {
+                // POST 요청에 대해서만 Rate Limiting 적용
+                if (request.method == "POST" && request.requestURI.startsWith("/api/messages")) {
+                    val clientIp = getClientIp(request)
+
+                    if (isRateLimited(clientIp)) {
+                        response.status = 429
+                        response.writer.write("{\"success\":false,\"message\":\"너무 많은 요청입니다. 잠시 후 다시 시도해주세요.\"}")
+                        return
+                    }
+                }
+
+                filterChain.doFilter(request, response)
+            }
